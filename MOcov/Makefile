@@ -7,13 +7,10 @@ MATLAB?=matlab
 OCTAVE?=octave
 
 TESTDIR=$(CURDIR)/tests
-ROOTDIR=$(CURDIR)/MOxUnit
-MOCOVROOTDIR=$(CURDIR)/MOcov
-MOCOVDIR=$(MOCOVROOTDIR)/MOcov
-MOCOVTESTDIR=$(MOCOVROOTDIR)/tests
+ROOTDIR=$(CURDIR)/MOcov
 
-ADDPATH=orig_dir=pwd();addpath('$(MOCOVDIR)');cd('$(ROOTDIR)');moxunit_set_path();cd(orig_dir)
-RMPATH=rmpath('$(ROOTDIR)');rmpath('$(MOCOVDIR)');
+ADDPATH=orig_dir=pwd();cd('$(ROOTDIR)');addpath(pwd);cd(orig_dir)
+RMPATH=rmpath('$(ROOTDIR)');
 SAVEPATH=savepath();exit(0)
 
 INSTALL=$(ADDPATH);$(SAVEPATH)
@@ -22,29 +19,28 @@ UNINSTALL=$(RMPATH);$(SAVEPATH)
 help:
 	@echo "Usage: make <target>, where <target> is one of:"
 	@echo "------------------------------------------------------------------"
-	@echo "  install            to add MOxUnit to the Matlab and GNU Octave"
+	@echo "  install            to add MOcov to the Matlab and GNU Octave"
 	@echo "                     search paths, using whichever is present"
-	@echo "  uninstall          to remove MOxUnit from the Matlab and GNU"
+	@echo "  uninstall          to remove MOcov from the Matlab and GNU"
 	@echo "                     Octave search paths, using whichever is"
 	@echo "                     present"
 	@echo "  test               to run tests using the Matlab and GNU Octave"
 	@echo "                     search paths, whichever is present"
 	@echo ""
-	@echo "  install-matlab     to add MOxUnit to the Matlab search path"
-	@echo "  install-octave     to add MOxUnit to the GNU Octave search path"
-	@echo "  uninstall-matlab   to remove MOxUnit from the Matlab search path"
-	@echo "  uninstall-octave   to remove MOxUnit from the GNU Octave search"
+	@echo "  install-matlab     to add MOcov to the Matlab search path"
+	@echo "  install-octave     to add MOcov to the GNU Octave search path"
+	@echo "  uninstall-matlab   to remove MOcov from the Matlab search path"
+	@echo "  uninstall-octave   to remove MOcov from the GNU Octave search"
 	@echo "                     path"
 	@echo "  test-matlab        to run tests using Matlab"
 	@echo "  test-octave        to run tests using GNU Octave"
 	@echo "------------------------------------------------------------------"
 	@echo ""
-	@echo "Environmental variables:"
-	@echo "  COVER              Directory to compute line coverage for"
-	@echo "  COVER_XML_FILE    	Coverage XML output filename	"
-	@echo "  COVER_JSON_FILE    Coverage JSON output filename"
-	@echo "  COVER_HTML_DIR     Coverage HTML output directory"
-	@echo "  COVER_HTML_DIR     Coverage HTML output directory"
+	@echo "Environmental variables setting filenames for output:"
+	@echo "  COVERAGE_DIR       Directory for which coverage is determined"
+	@echo "  JUNIT_XML    		JUnit-like XML output"
+	@echo "  COVERALLS_JSON     JSON output (for coveralls)"
+	@echo "  COBERTURA_XML      XML output (for shippable)"
 	@echo ""
 
 RUNTESTS_ARGS='${TESTDIR}'
@@ -52,36 +48,25 @@ ifdef JUNIT_XML
 	RUNTESTS_ARGS +=,'-junit_xml','$(JUNIT_XML)'
 endif
 
-ifdef WITH_COVERAGE
-	ifndef COVER
-		#$(error COVER variable must be set when using WITH_COVERAGE)
-	endif
-	RUNTESTS_ARGS+=,'-with_coverage','-cover','$(COVER)'
-	export COVER
+ifdef COVERAGE_DIR
+	RUNTESTS_ARGS+=,'-coverage_dir','$(COVERAGE_DIR)'
+	export COVERAGE_DIR
 
-	ifdef COVER_XML_FILE
-		 RUNTESTS_ARGS+=,'-cover_xml_file','$(COVER_XML_FILE)'
-		 export COVER_XML_FILE
+	ifdef COVERALLS_JSON
+		 RUNTESTS_ARGS+=,'-coveralls_json','$(COVERALLS_JSON)'
+		 export COVERALLS_JSON
 	endif
 
-	ifdef COVER_HTML_DIR
-		 RUNTESTS_ARGS+=,'-cover_html_dir','$(COVER_HTML_DIR)'
-		 export COVER_HTML_DIR
-	endif
-
-	ifdef COVER_JSON_FILE
-		 RUNTESTS_ARGS+=,'-cover_json_file','$(COVER_JSON_FILE)'
-		 export COVER_JSON_FILE
-	endif
-
-	ifdef JUNIT_XML_FILE
-		 RUNTESTS_ARGS+=,'-junit_xml_file','$(JUNIT_XML_FILE)'
-		 export JUNIT_XML_FILE
+	ifdef COBERTURA_XML
+		 RUNTESTS_ARGS+=,'-cobertura_xml','$(COBERTURA_XML)'
+		 export COBERTURA_XML
 	endif
 endif
 		
+export RUNTESTS_ARGS
+	
 
-TEST=$(ADDPATH);success=moxunit_runtests($(RUNTESTS_ARGS))&&moxunit_runtests('$(MOCOVTESTDIR)');exit(~success);
+TEST=$(ADDPATH);success=moxunit_runtests($(RUNTESTS_ARGS));exit(~success);
 
 MATLAB_BIN=$(shell which $(MATLAB))
 OCTAVE_BIN=$(shell which $(OCTAVE))
@@ -148,7 +133,7 @@ test-matlab:
 	fi;
 
 test-octave:
-	@if [ -n "$(OCTAVE_BIN)" ]; then \
+	if [ -n "$(OCTAVE_BIN)" ]; then \
 		$(OCTAVE_RUN) "$(TEST)"; \
 	else \
 		echo "octave binary could not be found, skipping"; \
